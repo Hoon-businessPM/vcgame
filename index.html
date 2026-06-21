@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>유도 미사일 피하기</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="game-wrap">
+    <section class="hud">
+      <div>
+        <span class="label">SCORE</span>
+        <strong id="score">0</strong>
+      </div>
+      <div>
+        <span class="label">BEST</span>
+        <strong id="bestScore">0</strong>
+      </div>
+    </section>
+
+    <canvas id="gameCanvas" width="900" height="560" aria-label="유도 미사일 피하기 게임 화면"></canvas>
+
+    <section id="startPanel" class="panel">
+      <h1>🚀 유도 미사일 피하기</h1>
+      <p>플레이어를 조종해서 따라오는 미사일을 최대한 오래 피하세요.</p>
+      <p class="control">조작: <kbd>WASD</kbd> 또는 <kbd>방향키</kbd></p>
+      <button id="startButton">게임 시작</button>
+    </section>
+
+    <section id="gameOverPanel" class="panel hidden">
+      <h2>💥 Game Over</h2>
+      <p>점수: <strong id="finalScore">0</strong></p>
+      <p>최고 기록: <strong id="finalBestScore">0</strong></p>
+      <button id="restartButton">다시 시작</button>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
