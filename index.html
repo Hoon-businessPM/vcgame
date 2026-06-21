@@ -17,6 +17,10 @@
         <span class="label">BEST</span>
         <strong id="bestScore">0</strong>
       </div>
+      <div>
+        <span class="label">STAGE</span>
+        <strong id="stageText">1</strong>
+      </div>
       <button id="soundButton" class="sound-button" type="button" aria-label="효과음 켜기 또는 끄기">🔊 SOUND ON</button>
     </section>
 
@@ -25,8 +29,9 @@
     <section id="startPanel" class="panel">
       <h1>🚀 유도 미사일 피하기</h1>
       <p>플레이어를 조종해서 따라오는 미사일을 최대한 오래 피하세요.</p>
+      <p class="stage-guide">난이도: 1단계 → 2단계 → 3단계로 자동 상승합니다.</p>
       <p class="control">조작: <kbd>WASD</kbd> 또는 <kbd>방향키</kbd></p>
-      <p class="sound-guide">효과음: 이동 / 미사일 등장 / 점수 구간 / 최고기록 / 패배 / 재시작</p>
+      <p class="sound-guide">효과음: 이동 / 미사일 등장 / 점수 구간 / 단계 상승 / 최고기록 / 패배 / 재시작</p>
       <button id="startButton">게임 시작</button>
     </section>
 
@@ -34,6 +39,24 @@
       <h2>💥 Game Over</h2>
       <p>점수: <strong id="finalScore">0</strong></p>
       <p>최고 기록: <strong id="finalBestScore">0</strong></p>
+
+      <form id="rankingForm" class="ranking-form">
+        <label for="nicknameInput">닉네임을 남겨 랭킹에 등록하세요</label>
+        <div class="ranking-input-row">
+          <input id="nicknameInput" type="text" maxlength="10" placeholder="닉네임 입력" autocomplete="off" />
+          <button id="saveRankingButton" type="submit">등록</button>
+        </div>
+        <p id="rankingMessage" class="ranking-message" aria-live="polite"></p>
+      </form>
+
+      <div class="ranking-board">
+        <div class="ranking-head">
+          <h3>🏆 TOP 10 랭킹</h3>
+          <button id="clearRankingButton" class="sub-button" type="button">초기화</button>
+        </div>
+        <ol id="rankingList" class="ranking-list"></ol>
+      </div>
+
       <button id="restartButton">다시 시작</button>
     </section>
   </main>

@@ -3,6 +3,7 @@ const ctx = canvas.getContext('2d');
 
 const scoreEl = document.getElementById('score');
 const bestScoreEl = document.getElementById('bestScore');
+const stageTextEl = document.getElementById('stageText');
 const finalScoreEl = document.getElementById('finalScore');
 const finalBestScoreEl = document.getElementById('finalBestScore');
 const startPanel = document.getElementById('startPanel');
@@ -10,6 +11,12 @@ const gameOverPanel = document.getElementById('gameOverPanel');
 const startButton = document.getElementById('startButton');
 const restartButton = document.getElementById('restartButton');
 const soundButton = document.getElementById('soundButton');
+const rankingForm = document.getElementById('rankingForm');
+const nicknameInput = document.getElementById('nicknameInput');
+const saveRankingButton = document.getElementById('saveRankingButton');
+const rankingMessage = document.getElementById('rankingMessage');
+const rankingList = document.getElementById('rankingList');
+const clearRankingButton = document.getElementById('clearRankingButton');
 
 const keys = new Set();
 let animationId = null;
@@ -21,6 +28,16 @@ let lastTime = 0;
 let missileSpawnTimer = 0;
 let moveSoundTimer = 0;
 let nextScoreSound = 50;
+let lastFinalScore = 0;
+let hasSavedCurrentRun = false;
+let currentStage = 1;
+let lastFinalStage = 1;
+const STAGE_CONFIG = [
+  { stage: 1, minScore: 0, missileSpeedBonus: 0, turnBonus: 0, spawnBase: 2.2, spawnMin: 0.85, maxMissiles: 6, scoreMultiplier: 1 },
+  { stage: 2, minScore: 100, missileSpeedBonus: 65, turnBonus: 0.9, spawnBase: 1.65, spawnMin: 0.62, maxMissiles: 9, scoreMultiplier: 1.2 },
+  { stage: 3, minScore: 220, missileSpeedBonus: 135, turnBonus: 1.8, spawnBase: 1.2, spawnMin: 0.42, maxMissiles: 13, scoreMultiplier: 1.45 },
+];
+const RANKING_STORAGE_KEY = 'missileDodgeRanking';
 
 bestScoreEl.textContent = bestScore;
 
@@ -135,10 +152,87 @@ const sound = {
     setTimeout(() => playTone({ frequency: 783.99, type: 'triangle', duration: 0.12, volume: 0.09 }), 180);
     setTimeout(() => playTone({ frequency: 1046.5, type: 'sine', duration: 0.2, volume: 0.075 }), 290);
   },
+  stageUp() {
+    playTone({ frequency: 392, type: 'triangle', duration: 0.08, volume: 0.07 });
+    setTimeout(() => playTone({ frequency: 587.33, type: 'triangle', duration: 0.08, volume: 0.075 }), 80);
+    setTimeout(() => playTone({ frequency: 880, type: 'triangle', duration: 0.13, volume: 0.08 }), 160);
+  },
   toggle() {
     playTone({ frequency: 520, type: 'sine', duration: 0.06, volume: 0.05, slideTo: 700 });
   },
 };
+
+
+function loadRanking() {
+  try {
+    const savedRanking = JSON.parse(localStorage.getItem(RANKING_STORAGE_KEY)) || [];
+    return Array.isArray(savedRanking) ? savedRanking : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveRanking(ranking) {
+  localStorage.setItem(RANKING_STORAGE_KEY, JSON.stringify(ranking));
+}
+
+function sanitizeNickname(name) {
+  return name.trim().replace(/[<>]/g, '').slice(0, 10) || '익명 파일럿';
+}
+
+function renderRanking() {
+  const ranking = loadRanking();
+  rankingList.innerHTML = '';
+
+  if (ranking.length === 0) {
+    const emptyItem = document.createElement('li');
+    emptyItem.className = 'empty-ranking';
+    emptyItem.textContent = '아직 등록된 플레이 로그가 없습니다.';
+    rankingList.appendChild(emptyItem);
+    return;
+  }
+
+  ranking.forEach((record) => {
+    const item = document.createElement('li');
+    const row = document.createElement('div');
+    const name = document.createElement('span');
+    const scoreText = document.createElement('span');
+
+    row.className = 'ranking-item';
+    name.className = 'ranking-name';
+    scoreText.className = 'ranking-score';
+
+    name.textContent = record.name;
+    scoreText.textContent = `${record.score}점 · ${record.stage || 1}단계`;
+
+    row.append(name, scoreText);
+    item.appendChild(row);
+    rankingList.appendChild(item);
+  });
+}
+
+function addRankingRecord(name, scoreValue, stageValue) {
+  const ranking = loadRanking();
+  const newRecord = {
+    name: sanitizeNickname(name),
+    score: scoreValue,
+    stage: stageValue,
+    createdAt: new Date().toISOString(),
+  };
+
+  ranking.push(newRecord);
+  ranking.sort((a, b) => b.score - a.score || new Date(a.createdAt) - new Date(b.createdAt));
+  saveRanking(ranking.slice(0, 10));
+  renderRanking();
+}
+
+function resetRankingForm() {
+  hasSavedCurrentRun = false;
+  nicknameInput.value = '';
+  nicknameInput.disabled = false;
+  saveRankingButton.disabled = false;
+  rankingMessage.textContent = '';
+}
 
 function updateSoundButton() {
   soundButton.textContent = soundEnabled ? '🔊 SOUND ON' : '🔇 SOUND OFF';
@@ -147,6 +241,8 @@ function updateSoundButton() {
 
 function resetGame() {
   score = 0;
+  currentStage = 1;
+  lastFinalStage = 1;
   lastTime = 0;
   missileSpawnTimer = 0;
   moveSoundTimer = 0;
@@ -161,7 +257,10 @@ function resetGame() {
   spawnMissile(false);
 
   scoreEl.textContent = '0';
+  stageTextEl.textContent = '1';
+  resetRankingForm();
 }
+
 
 function startGame() {
   getAudioContext();
@@ -181,6 +280,8 @@ function endGame() {
   cancelAnimationFrame(animationId);
 
   const finalScore = Math.floor(score);
+  lastFinalScore = finalScore;
+  lastFinalStage = currentStage;
   const isNewRecord = finalScore > bestScore;
 
   if (isNewRecord) {
@@ -196,7 +297,9 @@ function endGame() {
   bestScoreEl.textContent = bestScore;
   finalScoreEl.textContent = finalScore;
   finalBestScoreEl.textContent = bestScore;
+  renderRanking();
   gameOverPanel.classList.remove('hidden');
+  setTimeout(() => nicknameInput.focus(), 50);
 }
 
 function spawnMissile(playSound = true) {
@@ -218,14 +321,15 @@ function spawnMissile(playSound = true) {
     y = Math.random() * canvas.height;
   }
 
-  const difficultyBonus = Math.min(score * 0.9, 140);
+  const stageConfig = getStageConfig();
+  const difficultyBonus = Math.min(score * 0.7, 110) + stageConfig.missileSpeedBonus;
 
   missiles.push({
     x,
     y,
     radius: 10,
     speed: 125 + difficultyBonus + Math.random() * 45,
-    turnRate: 3.2 + Math.min(score * 0.015, 2.4),
+    turnRate: 3.2 + Math.min(score * 0.012, 2.2) + stageConfig.turnBonus,
     angle: Math.atan2(player.y - y, player.x - x),
     trailTimer: 0,
   });
@@ -310,8 +414,38 @@ function updateParticles(delta) {
     .filter((particle) => particle.life > 0);
 }
 
+function getStageConfig() {
+  let selectedConfig = STAGE_CONFIG[0];
+
+  for (const config of STAGE_CONFIG) {
+    if (score >= config.minScore) {
+      selectedConfig = config;
+    }
+  }
+
+  return selectedConfig;
+}
+
+function updateStage() {
+  const nextStage = getStageConfig().stage;
+
+  if (nextStage !== currentStage) {
+    currentStage = nextStage;
+    stageTextEl.textContent = currentStage;
+    sound.stageUp();
+
+    if (currentStage === 2) spawnMissile();
+    if (currentStage === 3) {
+      spawnMissile();
+      spawnMissile();
+    }
+  }
+}
+
 function update(delta) {
-  score += delta * 10;
+  const stageConfig = getStageConfig();
+  score += delta * 10 * stageConfig.scoreMultiplier;
+  updateStage();
   scoreEl.textContent = Math.floor(score);
 
   if (score >= nextScoreSound) {
@@ -320,9 +454,10 @@ function update(delta) {
   }
 
   missileSpawnTimer += delta;
-  const spawnInterval = Math.max(0.65, 2.1 - score * 0.018);
+  const updatedStageConfig = getStageConfig();
+  const spawnInterval = Math.max(updatedStageConfig.spawnMin, updatedStageConfig.spawnBase - score * 0.012);
 
-  if (missileSpawnTimer >= spawnInterval) {
+  if (missileSpawnTimer >= spawnInterval && missiles.length < updatedStageConfig.maxMissiles) {
     missileSpawnTimer = 0;
     spawnMissile();
   }
@@ -410,11 +545,22 @@ function drawParticles() {
   }
 }
 
+function drawStageBadge() {
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(22, 22, 118, 38);
+  ctx.fillStyle = '#e5e7eb';
+  ctx.font = '700 18px Arial';
+  ctx.fillText(`${currentStage}단계`, 42, 47);
+  ctx.restore();
+}
+
 function draw() {
   drawBackground();
   drawParticles();
   drawMissiles();
   drawPlayer();
+  drawStageBadge();
 }
 
 function gameLoop(timestamp) {
@@ -454,5 +600,25 @@ soundButton.addEventListener('click', () => {
 startButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', startGame);
 
+rankingForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+
+  if (gameState !== 'over' || hasSavedCurrentRun) return;
+
+  addRankingRecord(nicknameInput.value, lastFinalScore, lastFinalStage);
+  hasSavedCurrentRun = true;
+  nicknameInput.disabled = true;
+  saveRankingButton.disabled = true;
+  rankingMessage.textContent = '랭킹에 등록되었습니다!';
+  sound.score();
+});
+
+clearRankingButton.addEventListener('click', () => {
+  localStorage.removeItem(RANKING_STORAGE_KEY);
+  renderRanking();
+  rankingMessage.textContent = '랭킹이 초기화되었습니다.';
+});
+
 updateSoundButton();
+renderRanking();
 draw();
