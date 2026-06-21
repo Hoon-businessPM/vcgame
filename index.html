@@ -2,9 +2,363 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>유도 미사일 피하기</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="theme-color" content="#050816" />
+  <meta name="description" content="미사일을 피하고 아이템을 활용해 3단계까지 살아남는 액션 게임" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="images/app-icon-192.png" />
+  <link rel="apple-touch-icon" href="images/app-icon-192.png" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: #f7f7f7;
+      background: #050816;
+      user-select: none;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 16px;
+    }
+
+    .game-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: 900px;
+      height: auto;
+      padding: 0;
+      background: radial-gradient(circle at 50% 20%, #202a44 0%, #111827 46%, #050816 100%);
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+      flex: 0 0 auto;
+      padding-bottom: 8px;
+    }
+
+    .hud div {
+      min-width: 0;
+    }
+
+    .label {
+      display: block;
+      font-size: 11px;
+      color: #9ca3af;
+      letter-spacing: 1px;
+    }
+
+    .hud strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1.05;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      color: #111827;
+      background: #67e8f9;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      transform: none;
+    }
+
+    .sound-button {
+      padding: 9px 12px;
+      font-size: 12px;
+      color: #e5e7eb;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .sound-button.off {
+      color: #9ca3af;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    canvas {
+      display: block;
+      flex: 0 0 auto;
+      width: 900px;
+      height: 560px;
+      border: 2px solid rgba(255, 255, 255, 0.16);
+      border-radius: 14px;
+      background: linear-gradient(180deg, #101827 0%, #0b1020 100%);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+      touch-action: none;
+    }
+
+    .panel {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(92vw, 560px);
+      max-height: calc(100dvh - 28px);
+      overflow-y: auto;
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
+      transform: translate(-50%, -50%);
+      padding: 26px 22px;
+      text-align: center;
+      border-radius: 18px;
+      background: rgba(7, 12, 24, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.52);
+    }
+
+    .panel h1,
+    .panel h2,
+    .panel h3 {
+      margin: 0 0 12px;
+    }
+
+    .panel p {
+      margin: 9px 0;
+      color: #d1d5db;
+      line-height: 1.5;
+    }
+
+    .difficulty-selector {
+      margin: 16px auto 8px;
+      max-width: 420px;
+    }
+
+    .difficulty-label {
+      display: block;
+      margin-bottom: 9px;
+      font-size: 13px;
+      color: #9ca3af;
+      letter-spacing: 1px;
+    }
+
+    .difficulty-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .difficulty-option {
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .difficulty-option.active {
+      color: #0f172a;
+      background: #67e8f9;
+    }
+
+    .guide,
+    .ranking-message {
+      font-size: 14px;
+      color: #9ca3af !important;
+    }
+
+    kbd {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 7px;
+      color: #111827;
+      background: #f9fafb;
+      font-weight: 700;
+    }
+
+    .main-button {
+      margin-top: 16px;
+      padding: 13px 24px;
+      font-size: 16px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .ranking-form {
+      margin: 16px 0 14px;
+      padding: 15px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .ranking-form label {
+      display: block;
+      margin-bottom: 10px;
+      color: #e5e7eb;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .ranking-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .ranking-input-row input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      color: #f9fafb;
+      background: rgba(0, 0, 0, 0.22);
+      outline: none;
+      user-select: text;
+    }
+
+    .ranking-input-row input:focus {
+      border-color: #67e8f9;
+    }
+
+    .ranking-input-row button {
+      padding: 12px 18px;
+      font-size: 14px;
+    }
+
+    .ranking-board {
+      margin-top: 14px;
+      padding: 15px;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: left;
+    }
+
+    .ranking-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .ranking-head h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .sub-button {
+      padding: 7px 11px;
+      font-size: 12px;
+      color: #d1d5db;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .ranking-list {
+      display: grid;
+      gap: 7px;
+      margin: 0;
+      padding-left: 24px;
+    }
+
+    .ranking-list li {
+      padding: 9px 10px;
+      border-radius: 10px;
+      color: #e5e7eb;
+      background: rgba(255, 255, 255, 0.055);
+    }
+
+    .ranking-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .ranking-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .ranking-score {
+      flex-shrink: 0;
+      color: #67e8f9;
+      font-weight: 800;
+    }
+
+    .empty-ranking {
+      color: #9ca3af !important;
+      text-align: center;
+      list-style: none;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        display: block;
+        padding: 0;
+      }
+
+      .game-wrap {
+        width: 100vw;
+        height: 100dvh;
+        padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+      }
+
+      .hud {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+
+      .hud strong {
+        font-size: 20px;
+      }
+
+      .sound-button {
+        grid-column: 1 / -1;
+        width: 100%;
+      }
+
+      canvas {
+        flex: 1 1 auto;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+      }
+
+      .difficulty-buttons,
+      .ranking-input-row {
+        flex-direction: column;
+      }
+
+      .panel {
+        width: calc(100vw - 18px);
+        padding: 20px 16px;
+      }
+    }
+  </style>
 </head>
 <body>
   <main class="game-wrap">
@@ -21,28 +375,39 @@
         <span class="label">STAGE</span>
         <strong id="stageText">1</strong>
       </div>
-      <button id="soundButton" class="sound-button" type="button" aria-label="효과음 켜기 또는 끄기">🔊 SOUND ON</button>
+      <button id="soundButton" class="sound-button" type="button" aria-label="효과음 켜기 또는 끄기">SOUND ON</button>
+      <button id="bgmButton" class="sound-button" type="button" aria-label="배경음악 켜기 또는 끄기">BGM ON</button>
     </section>
 
-    <canvas id="gameCanvas" width="900" height="560" aria-label="유도 미사일 피하기 게임 화면"></canvas>
+    <canvas id="gameCanvas" aria-label="유도 미사일 피하기 게임 화면"></canvas>
+    <audio id="bgmAudio" src="sound/bgm.mp3" loop preload="auto"></audio>
 
     <section id="startPanel" class="panel">
-      <h1>🚀 유도 미사일 피하기</h1>
-      <p>플레이어를 조종해서 따라오는 미사일을 최대한 오래 피하세요.</p>
-      <p class="stage-guide">난이도: 1단계 → 2단계 → 3단계로 자동 상승합니다.</p>
-      <p class="item-guide">아이템: 🛡 무적 보호막 / ⚡ 이동속도 증가</p>
-      <p class="control">조작: <kbd>WASD</kbd> 또는 <kbd>방향키</kbd></p>
-      <p class="sound-guide">효과음: 이동 / 미사일 등장 / 아이템 획득 / 단계 상승 / 최고기록 / 패배 / 재시작</p>
-      <button id="startButton">게임 시작</button>
+      <h1>유도 미사일 피하기</h1>
+      <p>플레이어를 조종해서 따라오는 미사일을 피하고, 3단계 끝까지 살아남아 보세요.</p>
+
+      <div class="difficulty-selector">
+        <span class="difficulty-label">난이도 선택</span>
+        <div class="difficulty-buttons">
+          <button class="difficulty-option active" data-difficulty="easy" type="button">쉬움</button>
+          <button class="difficulty-option" data-difficulty="normal" type="button">보통</button>
+          <button class="difficulty-option" data-difficulty="hard" type="button">어려움</button>
+        </div>
+      </div>
+
+      <p class="guide">키보드: WASD 또는 방향키 / 모바일: 화면을 누른 채 손가락으로 이동</p>
+      <p class="guide">아이템: 방패 무적 / 속도 증가 / 미사일 감속</p>
+      <button id="startButton" class="main-button" type="button">게임 시작</button>
     </section>
 
     <section id="gameOverPanel" class="panel hidden">
-      <h2>💥 Game Over</h2>
+      <h2 id="resultTitle">Game Over</h2>
+      <p id="resultText">다시 도전해 보세요.</p>
       <p>점수: <strong id="finalScore">0</strong></p>
       <p>최고 기록: <strong id="finalBestScore">0</strong></p>
 
       <form id="rankingForm" class="ranking-form">
-        <label for="nicknameInput">닉네임을 남겨 랭킹에 등록하세요</label>
+        <label for="nicknameInput">플레이 로그에 남길 닉네임을 입력하세요.</label>
         <div class="ranking-input-row">
           <input id="nicknameInput" type="text" maxlength="10" placeholder="닉네임 입력" autocomplete="off" />
           <button id="saveRankingButton" type="submit">등록</button>
@@ -52,16 +417,1067 @@
 
       <div class="ranking-board">
         <div class="ranking-head">
-          <h3>🏆 TOP 10 랭킹</h3>
+          <h3>TOP 10 플레이 로그</h3>
           <button id="clearRankingButton" class="sub-button" type="button">초기화</button>
         </div>
         <ol id="rankingList" class="ranking-list"></ol>
       </div>
 
-      <button id="restartButton">다시 시작</button>
+      <button id="restartButton" class="main-button" type="button">다시 시작</button>
     </section>
   </main>
 
-  <script src="script.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const scoreEl = document.getElementById('score');
+    const bestScoreEl = document.getElementById('bestScore');
+    const stageTextEl = document.getElementById('stageText');
+    const finalScoreEl = document.getElementById('finalScore');
+    const finalBestScoreEl = document.getElementById('finalBestScore');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultText = document.getElementById('resultText');
+    const startPanel = document.getElementById('startPanel');
+    const gameOverPanel = document.getElementById('gameOverPanel');
+    const startButton = document.getElementById('startButton');
+    const restartButton = document.getElementById('restartButton');
+    const soundButton = document.getElementById('soundButton');
+    const bgmButton = document.getElementById('bgmButton');
+    const bgmAudio = document.getElementById('bgmAudio');
+    const rankingForm = document.getElementById('rankingForm');
+    const nicknameInput = document.getElementById('nicknameInput');
+    const saveRankingButton = document.getElementById('saveRankingButton');
+    const rankingMessage = document.getElementById('rankingMessage');
+    const rankingList = document.getElementById('rankingList');
+    const clearRankingButton = document.getElementById('clearRankingButton');
+    const difficultyButtons = document.querySelectorAll('.difficulty-option');
+
+    const CLEAR_SCORE = 420;
+    const RANKING_STORAGE_KEY = 'missileDodgeRanking';
+    const BEST_SCORE_KEY = 'missileDodgeBestScore';
+    const SOUND_KEY = 'missileDodgeSound';
+    const BGM_KEY = 'missileDodgeBgm';
+
+    // 단계별 설정입니다. 숫자만 바꾸면 난이도 조절이 쉽습니다.
+    const STAGE_CONFIG = [
+      { stage: 1, minScore: 0, missileSpeedBonus: 0, turnBonus: 0, spawnBase: 2.2, spawnMin: 0.9, maxMissiles: 5, scoreMultiplier: 1 },
+      { stage: 2, minScore: 120, missileSpeedBonus: 18, turnBonus: 0.25, spawnBase: 1.85, spawnMin: 0.74, maxMissiles: 7, scoreMultiplier: 1.15 },
+      { stage: 3, minScore: 260, missileSpeedBonus: 38, turnBonus: 0.55, spawnBase: 1.45, spawnMin: 0.58, maxMissiles: 9, scoreMultiplier: 1.35 },
+    ];
+
+    const DIFFICULTY_CONFIG = {
+      easy: { label: '쉬움', scoreMultiplier: 0.9, missileMultiplier: 0.82, itemIntervalBonus: -0.8 },
+      normal: { label: '보통', scoreMultiplier: 1, missileMultiplier: 1, itemIntervalBonus: 0 },
+      hard: { label: '어려움', scoreMultiplier: 1.1, missileMultiplier: 1.22, itemIntervalBonus: 0.8 },
+    };
+
+    const ITEM_CONFIG = {
+      spawnInterval: 7.5,
+      lifeTime: 6,
+      radius: 14,
+      shieldDuration: 4.5,
+      boostDuration: 3.5,
+      slowDuration: 4,
+      boostMultiplier: 1.32,
+    };
+
+    const keys = new Set();
+    const player = { x: 0, y: 0, radius: 15, speed: 285 };
+    const touchControl = { active: false, x: 0, y: 0 };
+
+    let animationId = null;
+    let gameState = 'ready';
+    let score = 0;
+    let bestScore = Number(localStorage.getItem(BEST_SCORE_KEY)) || 0;
+    let soundEnabled = localStorage.getItem(SOUND_KEY) !== 'off';
+    let bgmEnabled = localStorage.getItem(BGM_KEY) !== 'off';
+    let selectedDifficulty = 'normal';
+    let lastTime = 0;
+    let missileSpawnTimer = 0;
+    let itemSpawnTimer = 0;
+    let moveSoundTimer = 0;
+    let nextScoreSound = 50;
+    let currentStage = 1;
+    let lastFinalScore = 0;
+    let lastFinalStage = 1;
+    let lastRunCleared = false;
+    let hasSavedCurrentRun = false;
+    let missiles = [];
+    let particles = [];
+    let items = [];
+    let activeEffects = { shield: 0, boost: 0, slow: 0 };
+    let audioContext = null;
+    const itemImages = {
+      shield: createItemImage('images/shield.png'),
+      boost: createItemImage('images/boost.png'),
+      slow: createItemImage('images/slow.png'),
+    };
+
+    bestScoreEl.textContent = bestScore;
+
+    function createItemImage(src) {
+      const image = new Image();
+      image.src = src;
+      return image;
+    }
+
+    function resizeCanvas() {
+      const isMobileLayout = window.matchMedia('(max-width: 640px)').matches;
+      const rect = canvas.getBoundingClientRect();
+      const nextWidth = isMobileLayout ? Math.max(320, Math.floor(rect.width)) : 900;
+      const nextHeight = isMobileLayout ? Math.max(360, Math.floor(rect.height)) : 560;
+      const oldWidth = canvas.width || nextWidth;
+      const oldHeight = canvas.height || nextHeight;
+
+      canvas.width = nextWidth;
+      canvas.height = nextHeight;
+
+      if (player.x === 0 && player.y === 0) {
+        player.x = canvas.width / 2;
+        player.y = canvas.height / 2;
+        return;
+      }
+
+      player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x * (canvas.width / oldWidth)));
+      player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y * (canvas.height / oldHeight)));
+    }
+
+    function getAudioContext() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+
+      return audioContext;
+    }
+
+    function playTone({ frequency = 440, type = 'sine', duration = 0.08, volume = 0.08, slideTo = null }) {
+      if (!soundEnabled) return;
+
+      const audio = getAudioContext();
+      const now = audio.currentTime;
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, now);
+      if (slideTo) oscillator.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+      oscillator.start(now);
+      oscillator.stop(now + duration + 0.02);
+    }
+
+    function playNoise({ duration = 0.16, volume = 0.08 } = {}) {
+      if (!soundEnabled) return;
+
+      const audio = getAudioContext();
+      const now = audio.currentTime;
+      const bufferSize = audio.sampleRate * duration;
+      const buffer = audio.createBuffer(1, bufferSize, audio.sampleRate);
+      const output = buffer.getChannelData(0);
+
+      for (let i = 0; i < bufferSize; i += 1) {
+        output[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      }
+
+      const noise = audio.createBufferSource();
+      const gain = audio.createGain();
+      const filter = audio.createBiquadFilter();
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(900, now);
+      filter.frequency.exponentialRampToValueAtTime(120, now + duration);
+      gain.gain.setValueAtTime(volume, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      noise.buffer = buffer;
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audio.destination);
+      noise.start(now);
+      noise.stop(now + duration);
+    }
+
+    const sound = {
+      start() {
+        playTone({ frequency: 420, type: 'triangle', duration: 0.08, volume: 0.08, slideTo: 620 });
+        setTimeout(() => playTone({ frequency: 720, type: 'triangle', duration: 0.1, volume: 0.08 }), 70);
+      },
+      move() {
+        playTone({ frequency: 180, type: 'sine', duration: 0.035, volume: 0.025, slideTo: 230 });
+      },
+      missile() {
+        playTone({ frequency: 160, type: 'sawtooth', duration: 0.12, volume: 0.045, slideTo: 95 });
+      },
+      score() {
+        playTone({ frequency: 660, type: 'square', duration: 0.06, volume: 0.045 });
+        setTimeout(() => playTone({ frequency: 880, type: 'square', duration: 0.06, volume: 0.035 }), 45);
+      },
+      explosion() {
+        playNoise({ duration: 0.28, volume: 0.16 });
+        playTone({ frequency: 90, type: 'sawtooth', duration: 0.24, volume: 0.11, slideTo: 45 });
+      },
+      item() {
+        playTone({ frequency: 784, type: 'triangle', duration: 0.07, volume: 0.065 });
+        setTimeout(() => playTone({ frequency: 1174.66, type: 'sine', duration: 0.1, volume: 0.06 }), 70);
+      },
+      shieldHit() {
+        playTone({ frequency: 260, type: 'square', duration: 0.08, volume: 0.07, slideTo: 520 });
+        setTimeout(() => playTone({ frequency: 620, type: 'triangle', duration: 0.12, volume: 0.055 }), 70);
+      },
+      defeat() {
+        playNoise({ duration: 0.22, volume: 0.12 });
+        playTone({ frequency: 220, type: 'sawtooth', duration: 0.16, volume: 0.08, slideTo: 120 });
+        setTimeout(() => playTone({ frequency: 130, type: 'sawtooth', duration: 0.22, volume: 0.075, slideTo: 55 }), 120);
+      },
+      newRecord() {
+        playTone({ frequency: 523.25, type: 'triangle', duration: 0.1, volume: 0.08 });
+        setTimeout(() => playTone({ frequency: 659.25, type: 'triangle', duration: 0.1, volume: 0.08 }), 90);
+        setTimeout(() => playTone({ frequency: 783.99, type: 'triangle', duration: 0.12, volume: 0.09 }), 180);
+      },
+      stageUp() {
+        playTone({ frequency: 392, type: 'triangle', duration: 0.08, volume: 0.07 });
+        setTimeout(() => playTone({ frequency: 587.33, type: 'triangle', duration: 0.08, volume: 0.075 }), 80);
+        setTimeout(() => playTone({ frequency: 880, type: 'triangle', duration: 0.13, volume: 0.08 }), 160);
+      },
+      clear() {
+        playTone({ frequency: 523.25, type: 'triangle', duration: 0.08, volume: 0.08 });
+        setTimeout(() => playTone({ frequency: 659.25, type: 'triangle', duration: 0.08, volume: 0.08 }), 90);
+        setTimeout(() => playTone({ frequency: 783.99, type: 'triangle', duration: 0.08, volume: 0.08 }), 180);
+        setTimeout(() => playTone({ frequency: 1046.5, type: 'sine', duration: 0.18, volume: 0.08 }), 280);
+      },
+      toggle() {
+        playTone({ frequency: 520, type: 'sine', duration: 0.06, volume: 0.05, slideTo: 700 });
+      },
+    };
+
+    function getDifficultyConfig() {
+      return DIFFICULTY_CONFIG[selectedDifficulty] || DIFFICULTY_CONFIG.normal;
+    }
+
+    function loadRanking() {
+      try {
+        const savedRanking = JSON.parse(localStorage.getItem(RANKING_STORAGE_KEY)) || [];
+        return Array.isArray(savedRanking) ? savedRanking : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveRanking(ranking) {
+      localStorage.setItem(RANKING_STORAGE_KEY, JSON.stringify(ranking));
+    }
+
+    function sanitizeNickname(name) {
+      return name.trim().replace(/[<>]/g, '').slice(0, 10) || '이름 없음';
+    }
+
+    function renderRanking() {
+      const ranking = loadRanking();
+      rankingList.innerHTML = '';
+
+      if (ranking.length === 0) {
+        const emptyItem = document.createElement('li');
+        emptyItem.className = 'empty-ranking';
+        emptyItem.textContent = '아직 플레이 로그가 없습니다.';
+        rankingList.appendChild(emptyItem);
+        return;
+      }
+
+      ranking.forEach((record) => {
+        const item = document.createElement('li');
+        const row = document.createElement('div');
+        const name = document.createElement('span');
+        const scoreText = document.createElement('span');
+
+        row.className = 'ranking-item';
+        name.className = 'ranking-name';
+        scoreText.className = 'ranking-score';
+
+        name.textContent = record.name;
+        scoreText.textContent = `${record.score}점 / ${record.result} / ${record.difficulty}`;
+
+        row.append(name, scoreText);
+        item.appendChild(row);
+        rankingList.appendChild(item);
+      });
+    }
+
+    function addRankingRecord(name) {
+      const ranking = loadRanking();
+      const difficultyConfig = getDifficultyConfig();
+      const newRecord = {
+        name: sanitizeNickname(name),
+        score: lastFinalScore,
+        stage: lastFinalStage,
+        result: lastRunCleared ? '클리어' : '실패',
+        difficulty: difficultyConfig.label,
+        createdAt: new Date().toISOString(),
+      };
+
+      ranking.push(newRecord);
+      ranking.sort((a, b) => b.score - a.score || new Date(b.createdAt) - new Date(a.createdAt));
+      saveRanking(ranking.slice(0, 10));
+      renderRanking();
+    }
+
+    function resetRankingForm() {
+      hasSavedCurrentRun = false;
+      nicknameInput.value = '';
+      nicknameInput.disabled = false;
+      saveRankingButton.disabled = false;
+      rankingMessage.textContent = '';
+    }
+
+    function updateSoundButton() {
+      soundButton.textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF';
+      soundButton.classList.toggle('off', !soundEnabled);
+    }
+
+    function updateBgmButton() {
+      bgmButton.textContent = bgmEnabled ? 'BGM ON' : 'BGM OFF';
+      bgmButton.classList.toggle('off', !bgmEnabled);
+    }
+
+    function playBgmIfEnabled() {
+      if (!bgmEnabled) {
+        bgmAudio.pause();
+        return;
+      }
+
+      bgmAudio.volume = 0.35;
+      bgmAudio.play().catch(() => {
+        // 브라우저가 자동 재생을 막으면 다음 사용자 클릭 때 다시 시도합니다.
+      });
+    }
+
+    function setDifficulty(level) {
+      selectedDifficulty = level;
+      difficultyButtons.forEach((button) => {
+        button.classList.toggle('active', button.dataset.difficulty === level);
+      });
+    }
+
+    function resetGame() {
+      resizeCanvas();
+      score = 0;
+      currentStage = 1;
+      lastFinalStage = 1;
+      lastRunCleared = false;
+      lastTime = 0;
+      missileSpawnTimer = 0;
+      itemSpawnTimer = 0;
+      moveSoundTimer = 0;
+      nextScoreSound = 50;
+      missiles = [];
+      particles = [];
+      items = [];
+      activeEffects = { shield: 0, boost: 0, slow: 0 };
+      touchControl.active = false;
+
+      player.x = canvas.width / 2;
+      player.y = canvas.height / 2;
+
+      spawnMissile(false);
+      spawnMissile(false);
+
+      scoreEl.textContent = '0';
+      stageTextEl.textContent = '1';
+      resetRankingForm();
+    }
+
+    function startGame() {
+      getAudioContext();
+      resetGame();
+      sound.start();
+      playBgmIfEnabled();
+      gameState = 'playing';
+      startPanel.classList.add('hidden');
+      gameOverPanel.classList.add('hidden');
+      cancelAnimationFrame(animationId);
+      animationId = requestAnimationFrame(gameLoop);
+    }
+
+    function endGame({ cleared = false } = {}) {
+      if (gameState !== 'playing') return;
+
+      gameState = 'over';
+      cancelAnimationFrame(animationId);
+
+      const finalScore = Math.floor(score);
+      const isNewRecord = finalScore > bestScore;
+      lastFinalScore = finalScore;
+      lastFinalStage = currentStage;
+      lastRunCleared = cleared;
+
+      if (cleared) {
+        resultTitle.textContent = isNewRecord ? 'Mission Clear + 최고 기록' : 'Mission Clear';
+        resultText.textContent = '3단계 끝까지 살아남았습니다. 닉네임을 남겨 플레이 로그에 등록해 보세요.';
+        sound.clear();
+        if (isNewRecord) setTimeout(() => sound.newRecord(), 420);
+      } else if (isNewRecord) {
+        resultTitle.textContent = '최고 기록 달성';
+        resultText.textContent = '미사일에 맞았지만 새로운 최고 기록을 세웠습니다. 닉네임을 남길 수 있습니다.';
+        sound.defeat();
+        setTimeout(() => sound.newRecord(), 300);
+      } else {
+        resultTitle.textContent = 'Game Over';
+        resultText.textContent = '미사일에 맞았습니다. 닉네임을 남기고 다시 도전해 보세요.';
+        sound.defeat();
+      }
+
+      bestScore = Math.max(bestScore, finalScore);
+      localStorage.setItem(BEST_SCORE_KEY, bestScore);
+
+      scoreEl.textContent = finalScore;
+      bestScoreEl.textContent = bestScore;
+      finalScoreEl.textContent = finalScore;
+      finalBestScoreEl.textContent = bestScore;
+      renderRanking();
+      gameOverPanel.classList.remove('hidden');
+      setTimeout(() => nicknameInput.focus(), 80);
+    }
+
+    function spawnMissile(playSound = true) {
+      const side = Math.floor(Math.random() * 4);
+      let x;
+      let y;
+
+      if (side === 0) {
+        x = Math.random() * canvas.width;
+        y = -20;
+      } else if (side === 1) {
+        x = canvas.width + 20;
+        y = Math.random() * canvas.height;
+      } else if (side === 2) {
+        x = Math.random() * canvas.width;
+        y = canvas.height + 20;
+      } else {
+        x = -20;
+        y = Math.random() * canvas.height;
+      }
+
+      const stageConfig = getStageConfig();
+      const difficultyConfig = getDifficultyConfig();
+      const difficultyBonus = Math.min(score * 0.34, 65) + stageConfig.missileSpeedBonus;
+
+      missiles.push({
+        x,
+        y,
+        radius: 10,
+        speed: (118 + difficultyBonus + Math.random() * 28) * difficultyConfig.missileMultiplier,
+        turnRate: (2.85 + Math.min(score * 0.006, 1.25) + stageConfig.turnBonus) * difficultyConfig.missileMultiplier,
+        angle: Math.atan2(player.y - y, player.x - x),
+        trailTimer: 0,
+      });
+
+      if (playSound) sound.missile();
+    }
+
+    function updatePlayer(delta) {
+      let moveX = 0;
+      let moveY = 0;
+
+      if (keys.has('arrowleft') || keys.has('a')) moveX -= 1;
+      if (keys.has('arrowright') || keys.has('d')) moveX += 1;
+      if (keys.has('arrowup') || keys.has('w')) moveY -= 1;
+      if (keys.has('arrowdown') || keys.has('s')) moveY += 1;
+
+      // 터치 중이면 손가락 위치를 향해 이동합니다. 키보드 입력은 그대로 함께 사용할 수 있습니다.
+      if (touchControl.active) {
+        const targetX = touchControl.x - player.x;
+        const targetY = touchControl.y - player.y;
+        const distance = Math.hypot(targetX, targetY);
+
+        if (distance > 8) {
+          moveX += targetX / distance;
+          moveY += targetY / distance;
+        }
+      }
+
+      const isMoving = moveX !== 0 || moveY !== 0;
+
+      if (isMoving) {
+        const length = Math.hypot(moveX, moveY);
+        moveX /= length;
+        moveY /= length;
+
+        moveSoundTimer += delta;
+        if (moveSoundTimer >= 0.16) {
+          moveSoundTimer = 0;
+          sound.move();
+        }
+      } else {
+        moveSoundTimer = 0.16;
+      }
+
+      const speedMultiplier = activeEffects.boost > 0 ? ITEM_CONFIG.boostMultiplier : 1;
+      player.x += moveX * player.speed * speedMultiplier * delta;
+      player.y += moveY * player.speed * speedMultiplier * delta;
+
+      player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+      player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+    }
+
+    function normalizeAngle(angle) {
+      while (angle > Math.PI) angle -= Math.PI * 2;
+      while (angle < -Math.PI) angle += Math.PI * 2;
+      return angle;
+    }
+
+    function updateMissiles(delta) {
+      for (let i = missiles.length - 1; i >= 0; i -= 1) {
+        const missile = missiles[i];
+        const targetAngle = Math.atan2(player.y - missile.y, player.x - missile.x);
+        const angleDiff = normalizeAngle(targetAngle - missile.angle);
+        const maxTurn = missile.turnRate * delta * (activeEffects.slow > 0 ? 0.55 : 1);
+
+        missile.angle += Math.max(-maxTurn, Math.min(maxTurn, angleDiff));
+        missile.x += Math.cos(missile.angle) * missile.speed * delta * (activeEffects.slow > 0 ? 0.58 : 1);
+        missile.y += Math.sin(missile.angle) * missile.speed * delta * (activeEffects.slow > 0 ? 0.58 : 1);
+
+        missile.trailTimer += delta;
+        if (missile.trailTimer > 0.025) {
+          missile.trailTimer = 0;
+          particles.push({
+            x: missile.x - Math.cos(missile.angle) * 13,
+            y: missile.y - Math.sin(missile.angle) * 13,
+            radius: 5,
+            life: 0.45,
+          });
+        }
+
+        const distance = Math.hypot(player.x - missile.x, player.y - missile.y);
+        if (distance < player.radius + missile.radius) {
+          if (activeEffects.shield > 0) {
+            createBurst(missile.x, missile.y, '#67e8f9', 14);
+            sound.shieldHit();
+            missiles.splice(i, 1);
+            continue;
+          }
+
+          createBurst(player.x, player.y, '#fb923c', 24);
+          sound.explosion();
+          endGame({ cleared: false });
+          return;
+        }
+      }
+    }
+
+    function createBurst(x, y, color = '#fb923c', count = 10) {
+      for (let i = 0; i < count; i += 1) {
+        particles.push({
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 140,
+          vy: (Math.random() - 0.5) * 140,
+          radius: 3 + Math.random() * 4,
+          life: 0.45 + Math.random() * 0.25,
+          color,
+        });
+      }
+    }
+
+    function spawnItem() {
+      if (items.length >= 2) return;
+
+      const roll = Math.random();
+      let type = 'shield';
+      if (roll < 0.45) type = 'shield';
+      else if (roll < 0.8) type = 'boost';
+      else type = 'slow';
+
+      items.push({
+        type,
+        x: 50 + Math.random() * Math.max(1, canvas.width - 100),
+        y: 50 + Math.random() * Math.max(1, canvas.height - 100),
+        radius: ITEM_CONFIG.radius,
+        life: ITEM_CONFIG.lifeTime,
+        pulse: 0,
+      });
+    }
+
+    function collectItem(item) {
+      if (item.type === 'shield') {
+        activeEffects.shield = ITEM_CONFIG.shieldDuration;
+      } else if (item.type === 'boost') {
+        activeEffects.boost = ITEM_CONFIG.boostDuration;
+      } else if (item.type === 'slow') {
+        activeEffects.slow = ITEM_CONFIG.slowDuration;
+      }
+
+      const color = item.type === 'shield' ? '#67e8f9' : item.type === 'boost' ? '#a7f3d0' : '#c4b5fd';
+      createBurst(item.x, item.y, color, 16);
+      sound.item();
+    }
+
+    function updateItems(delta) {
+      itemSpawnTimer += delta;
+      const stageConfig = getStageConfig();
+      const difficultyConfig = getDifficultyConfig();
+      const itemInterval = Math.max(3.8, ITEM_CONFIG.spawnInterval - (stageConfig.stage - 1) * 0.9 + difficultyConfig.itemIntervalBonus);
+
+      if (itemSpawnTimer >= itemInterval) {
+        itemSpawnTimer = 0;
+        spawnItem();
+      }
+
+      activeEffects.shield = Math.max(0, activeEffects.shield - delta);
+      activeEffects.boost = Math.max(0, activeEffects.boost - delta);
+      activeEffects.slow = Math.max(0, activeEffects.slow - delta);
+
+      items = items.filter((item) => {
+        item.life -= delta;
+        item.pulse += delta * 5;
+
+        const distance = Math.hypot(player.x - item.x, player.y - item.y);
+        if (distance < player.radius + item.radius) {
+          collectItem(item);
+          return false;
+        }
+
+        return item.life > 0;
+      });
+    }
+
+    function updateParticles(delta) {
+      particles = particles
+        .map((particle) => ({
+          ...particle,
+          x: particle.x + (particle.vx || 0) * delta,
+          y: particle.y + (particle.vy || 0) * delta,
+          life: particle.life - delta,
+          radius: particle.radius + delta * 8,
+        }))
+        .filter((particle) => particle.life > 0);
+    }
+
+    function getStageConfig() {
+      let selectedConfig = STAGE_CONFIG[0];
+
+      for (const config of STAGE_CONFIG) {
+        if (score >= config.minScore) {
+          selectedConfig = config;
+        }
+      }
+
+      return selectedConfig;
+    }
+
+    function updateStage() {
+      const nextStage = getStageConfig().stage;
+
+      if (nextStage !== currentStage) {
+        currentStage = nextStage;
+        stageTextEl.textContent = currentStage;
+        sound.stageUp();
+
+        if (currentStage === 2) spawnMissile();
+        if (currentStage === 3) {
+          spawnMissile();
+          spawnMissile();
+        }
+      }
+    }
+
+    function update(delta) {
+      const stageConfig = getStageConfig();
+      const difficultyConfig = getDifficultyConfig();
+      score += delta * 10 * stageConfig.scoreMultiplier * difficultyConfig.scoreMultiplier;
+      updateStage();
+      scoreEl.textContent = Math.floor(score);
+
+      if (score >= CLEAR_SCORE) {
+        score = CLEAR_SCORE;
+        scoreEl.textContent = CLEAR_SCORE;
+        endGame({ cleared: true });
+        return;
+      }
+
+      if (score >= nextScoreSound) {
+        nextScoreSound += 50;
+        sound.score();
+      }
+
+      missileSpawnTimer += delta;
+      const updatedStageConfig = getStageConfig();
+      const spawnInterval = Math.max(updatedStageConfig.spawnMin, updatedStageConfig.spawnBase - score * 0.012);
+
+      if (missileSpawnTimer >= spawnInterval && missiles.length < updatedStageConfig.maxMissiles) {
+        missileSpawnTimer = 0;
+        spawnMissile();
+      }
+
+      updatePlayer(delta);
+      updateItems(delta);
+      updateMissiles(delta);
+      updateParticles(delta);
+    }
+
+    function drawBackground() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = 'rgba(255,255,255,0.045)';
+      ctx.lineWidth = 1;
+
+      for (let x = 0; x < canvas.width; x += 45) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+
+      for (let y = 0; y < canvas.height; y += 45) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawPlayer() {
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.fillStyle = '#67e8f9';
+      ctx.beginPath();
+      ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-5, -4, 3, 0, Math.PI * 2);
+      ctx.arc(5, -4, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawMissiles() {
+      for (const missile of missiles) {
+        ctx.save();
+        ctx.translate(missile.x, missile.y);
+        ctx.rotate(missile.angle);
+
+        const bodyGradient = ctx.createLinearGradient(-18, -9, 18, 9);
+        bodyGradient.addColorStop(0, '#f8fafc');
+        bodyGradient.addColorStop(0.48, '#cbd5e1');
+        bodyGradient.addColorStop(1, '#64748b');
+
+        ctx.shadowColor = 'rgba(244, 63, 94, 0.28)';
+        ctx.shadowBlur = 10;
+
+        ctx.fillStyle = bodyGradient;
+        ctx.beginPath();
+        ctx.moveTo(20, 0);
+        ctx.bezierCurveTo(13, -9, -10, -10, -22, -5);
+        ctx.lineTo(-22, 5);
+        ctx.bezierCurveTo(-10, 10, 13, 9, 20, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.moveTo(20, 0);
+        ctx.lineTo(9, -7);
+        ctx.lineTo(9, 7);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#22d3ee';
+        ctx.beginPath();
+        ctx.moveTo(-7, -6);
+        ctx.lineTo(-19, -17);
+        ctx.lineTo(1, -8);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-7, 6);
+        ctx.lineTo(-19, 17);
+        ctx.lineTo(1, 8);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(-23, -5, 5, 10);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(3, 0, 3.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.moveTo(-24, -5);
+        ctx.lineTo(-39, 0);
+        ctx.lineTo(-24, 5);
+        ctx.lineTo(-29, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#fb923c';
+        ctx.beginPath();
+        ctx.moveTo(-24, -3);
+        ctx.lineTo(-32, 0);
+        ctx.lineTo(-24, 3);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    function drawParticles() {
+      for (const particle of particles) {
+        ctx.globalAlpha = Math.max(particle.life / 0.45, 0);
+        ctx.fillStyle = particle.color || '#fb923c';
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function drawItems() {
+      for (const item of items) {
+        const pulse = Math.sin(item.pulse) * 3;
+        const itemColor = item.type === 'shield' ? '#67e8f9' : item.type === 'boost' ? '#a7f3d0' : '#c4b5fd';
+        const glow = item.type === 'shield' ? 'rgba(103, 232, 249, 0.18)' : item.type === 'boost' ? 'rgba(167, 243, 208, 0.18)' : 'rgba(196, 181, 253, 0.18)';
+        const icon = itemImages[item.type];
+        const iconSize = (item.radius + 13 + pulse * 0.25) * 2;
+
+        ctx.save();
+        ctx.translate(item.x, item.y);
+        ctx.globalAlpha = Math.min(1, item.life / 0.8);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, item.radius + 8 + pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = itemColor;
+        ctx.beginPath();
+        ctx.arc(0, 0, item.radius + pulse * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (icon && icon.complete && icon.naturalWidth > 0) {
+          const ratio = Math.min(iconSize / icon.naturalWidth, iconSize / icon.naturalHeight);
+          const drawWidth = icon.naturalWidth * ratio;
+          const drawHeight = icon.naturalHeight * ratio;
+          ctx.drawImage(icon, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+        }
+
+        ctx.restore();
+      }
+    }
+
+    function drawActiveEffects() {
+      if (activeEffects.shield > 0) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(103, 232, 249, 0.8)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius + 10 + Math.sin(Date.now() / 90) * 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const effects = [];
+      if (activeEffects.shield > 0) effects.push(`방패 ${activeEffects.shield.toFixed(1)}s`);
+      if (activeEffects.boost > 0) effects.push(`속도 ${activeEffects.boost.toFixed(1)}s`);
+      if (activeEffects.slow > 0) effects.push(`감속 ${activeEffects.slow.toFixed(1)}s`);
+
+      if (effects.length > 0) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+        ctx.fillRect(16, 62, Math.min(260, canvas.width - 32), 34);
+        ctx.fillStyle = '#e5e7eb';
+        ctx.font = '700 14px Arial';
+        ctx.fillText(effects.join('  '), 28, 84);
+        ctx.restore();
+      }
+    }
+
+    function drawStageBadge() {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.fillRect(16, 18, 104, 34);
+      ctx.fillStyle = '#e5e7eb';
+      ctx.font = '700 16px Arial';
+      ctx.fillText(`${currentStage}단계`, 32, 40);
+      ctx.restore();
+    }
+
+    function drawClearGauge() {
+      const gaugeWidth = Math.min(180, canvas.width - 170);
+      const gaugeHeight = 10;
+      const x = canvas.width - gaugeWidth - 18;
+      const y = 31;
+      const percent = Math.min(score / CLEAR_SCORE, 1);
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect(x, y, gaugeWidth, gaugeHeight);
+      ctx.fillStyle = '#67e8f9';
+      ctx.fillRect(x, y, gaugeWidth * percent, gaugeHeight);
+      ctx.fillStyle = '#d1d5db';
+      ctx.font = '700 12px Arial';
+      ctx.textAlign = 'right';
+      ctx.fillText(`클리어 ${Math.floor(percent * 100)}%`, x + gaugeWidth, y - 7);
+      ctx.restore();
+    }
+
+    function drawTouchGuide() {
+      if (!touchControl.active || gameState !== 'playing') return;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(103, 232, 249, 0.38)';
+      ctx.fillStyle = 'rgba(103, 232, 249, 0.16)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(touchControl.x, touchControl.y, 26, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function draw() {
+      drawBackground();
+      drawParticles();
+      drawItems();
+      drawMissiles();
+      drawPlayer();
+      drawTouchGuide();
+      drawActiveEffects();
+      drawStageBadge();
+      drawClearGauge();
+    }
+
+    function gameLoop(timestamp) {
+      if (gameState !== 'playing') return;
+
+      if (!lastTime) lastTime = timestamp;
+      const delta = Math.min((timestamp - lastTime) / 1000, 0.033);
+      lastTime = timestamp;
+
+      update(delta);
+      draw();
+
+      if (gameState === 'playing') {
+        animationId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function updateTouchPosition(event) {
+      const rect = canvas.getBoundingClientRect();
+      touchControl.x = Math.max(0, Math.min(canvas.width, event.clientX - rect.left));
+      touchControl.y = Math.max(0, Math.min(canvas.height, event.clientY - rect.top));
+    }
+
+    window.addEventListener('keydown', (event) => {
+      keys.add(event.key.toLowerCase());
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
+        event.preventDefault();
+      }
+    });
+
+    window.addEventListener('keyup', (event) => {
+      keys.delete(event.key.toLowerCase());
+    });
+
+    canvas.addEventListener('pointerdown', (event) => {
+      if (gameState !== 'playing') return;
+      canvas.setPointerCapture(event.pointerId);
+      touchControl.active = true;
+      updateTouchPosition(event);
+      event.preventDefault();
+    });
+
+    canvas.addEventListener('pointermove', (event) => {
+      if (!touchControl.active) return;
+      updateTouchPosition(event);
+      event.preventDefault();
+    });
+
+    canvas.addEventListener('pointerup', (event) => {
+      touchControl.active = false;
+      event.preventDefault();
+    });
+
+    canvas.addEventListener('pointercancel', () => {
+      touchControl.active = false;
+    });
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      draw();
+    });
+
+    soundButton.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem(SOUND_KEY, soundEnabled ? 'on' : 'off');
+      updateSoundButton();
+      sound.toggle();
+    });
+
+    bgmButton.addEventListener('click', () => {
+      bgmEnabled = !bgmEnabled;
+      localStorage.setItem(BGM_KEY, bgmEnabled ? 'on' : 'off');
+      updateBgmButton();
+      playBgmIfEnabled();
+    });
+
+    difficultyButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        setDifficulty(button.dataset.difficulty);
+      });
+    });
+
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', startGame);
+
+    rankingForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (gameState !== 'over' || hasSavedCurrentRun) return;
+
+      addRankingRecord(nicknameInput.value);
+      hasSavedCurrentRun = true;
+      nicknameInput.disabled = true;
+      saveRankingButton.disabled = true;
+      rankingMessage.textContent = '플레이 로그에 등록되었습니다.';
+      sound.score();
+    });
+
+    clearRankingButton.addEventListener('click', () => {
+      localStorage.removeItem(RANKING_STORAGE_KEY);
+      renderRanking();
+      rankingMessage.textContent = '플레이 로그가 초기화되었습니다.';
+    });
+
+    setDifficulty(selectedDifficulty);
+    updateSoundButton();
+    updateBgmButton();
+    resizeCanvas();
+    renderRanking();
+    draw();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').catch(() => {
+          // 서비스 워커 등록 실패는 게임 실행을 막지 않습니다.
+        });
+      });
+    }
+  </script>
 </body>
 </html>
