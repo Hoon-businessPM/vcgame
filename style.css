@@ -102,6 +102,7 @@ canvas {
 
 .sound-guide,
 .stage-guide,
+.item-guide,
 .ranking-message {
   font-size: 14px;
   color: #9ca3af !important;
