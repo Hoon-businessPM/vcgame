@@ -124,6 +124,17 @@ const sound = {
     playNoise({ duration: 0.28, volume: 0.16 });
     playTone({ frequency: 90, type: 'sawtooth', duration: 0.24, volume: 0.11, slideTo: 45 });
   },
+  defeat() {
+    playNoise({ duration: 0.22, volume: 0.12 });
+    playTone({ frequency: 220, type: 'sawtooth', duration: 0.16, volume: 0.08, slideTo: 120 });
+    setTimeout(() => playTone({ frequency: 130, type: 'sawtooth', duration: 0.22, volume: 0.075, slideTo: 55 }), 120);
+  },
+  newRecord() {
+    playTone({ frequency: 523.25, type: 'triangle', duration: 0.1, volume: 0.08 });
+    setTimeout(() => playTone({ frequency: 659.25, type: 'triangle', duration: 0.1, volume: 0.08 }), 90);
+    setTimeout(() => playTone({ frequency: 783.99, type: 'triangle', duration: 0.12, volume: 0.09 }), 180);
+    setTimeout(() => playTone({ frequency: 1046.5, type: 'sine', duration: 0.2, volume: 0.075 }), 290);
+  },
   toggle() {
     playTone({ frequency: 520, type: 'sine', duration: 0.06, volume: 0.05, slideTo: 700 });
   },
@@ -168,14 +179,22 @@ function endGame() {
 
   gameState = 'over';
   cancelAnimationFrame(animationId);
-  sound.explosion();
 
-  bestScore = Math.max(bestScore, Math.floor(score));
+  const finalScore = Math.floor(score);
+  const isNewRecord = finalScore > bestScore;
+
+  if (isNewRecord) {
+    sound.newRecord();
+  } else {
+    sound.defeat();
+  }
+
+  bestScore = Math.max(bestScore, finalScore);
   localStorage.setItem('missileDodgeBestScore', bestScore);
 
-  scoreEl.textContent = Math.floor(score);
+  scoreEl.textContent = finalScore;
   bestScoreEl.textContent = bestScore;
-  finalScoreEl.textContent = Math.floor(score);
+  finalScoreEl.textContent = finalScore;
   finalBestScoreEl.textContent = bestScore;
   gameOverPanel.classList.remove('hidden');
 }
